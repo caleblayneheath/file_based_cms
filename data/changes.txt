@@ -1,0 +1,15 @@
+Ruby Changes
+
+Added a questionably large number of toilets.
+
+Only when the skeleton is massaged, it will move slightly and truly.
+
+Fixed a bug that caused prisoners to become governors.
+
+Administered beer does not provide nutrition.
+
+During cannibalism, a popup window has been added explaining in more detail what is happening and telling about the tastes of human organ.
+
+Bees now become angry when baby bees are attacked.
+
+Corpses don't yell.
