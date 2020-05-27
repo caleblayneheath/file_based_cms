@@ -27,21 +27,57 @@ def load_file_content(path)
     end
 end
 
+def data_path
+  if ENV['RACK_ENV'] == 'test'
+    File.expand_path("../test/data", __FILE__)
+  else
+    File.expand_path("../data", __FILE__)
+  end
+end
+
 get '/' do
-  @files = Dir.glob(root + '/data/*').map do |path|
+  pattern = File.join(data_path, '*')
+  @files = Dir.glob(pattern).map do |path|
     File.basename(path)
   end
-
   erb :index, layout: :layout
 end
 
 get '/:filename' do
-  file_path = root + "/data/#{params[:filename]}"
+  file_name = params[:filename]
+  file_path = File.join(data_path, file_name)
   
   if File.exist?(file_path)
     load_file_content(file_path)
   else
-    session[:message] = "#{params[:filename]} does not exist."
+    if file_name != 'favicon.ico'
+      session[:message] = "#{file_name} does not exist."
+    end
     redirect '/'
   end
+end
+
+get '/:filename/edit' do
+  @file_name = params[:filename]
+  file_path = File.join(data_path, @file_name)
+
+  @content = File.read(file_path) if File.exist?(file_path)
+
+  if @content
+    erb :edit, layout: :layout
+  else
+    session[:message] = "#{@file_name} does not exist."
+    redirect '/'
+  end
+end
+
+post '/:filename' do
+  file_name = params[:filename]
+  file_path = File.join(data_path, file_name)
+
+  new_contents = params[:content]
+  File.write(file_path, new_contents)
+
+  session[:message] = "#{file_name} has been updated."
+  redirect '/'
 end
