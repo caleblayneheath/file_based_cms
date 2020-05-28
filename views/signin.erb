@@ -1,0 +1,9 @@
+<form method='post' action='/users/signin'>
+  <label for='username'>Username:</label>
+  <input type='text' id='username' name='username' value='<%= session[:username]%>'>
+  <br>
+  <label for='pwd'>Password:</label>
+  <input type='password' id='pwd' name='pwd'>
+  <br>
+  <input type='submit' value='Sign In'>
+</form>

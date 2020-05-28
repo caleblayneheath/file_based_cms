@@ -1,5 +1,24 @@
 <ul>
   <% @files.each do |file| %>
-    <li><a href="<%= file %>"><%= file %></a> <a href="<%= file %>/edit">(edit)</a></li>
+    <li>
+      <a href='/<%= file %>'><%= file %></a>
+      <a href='/<%= file %>/edit'>(edit)</a>
+      <form class='inline' method='post' action='/<%= file %>/delete'>
+        <input type='submit' value='delete'>
+      </form>
+    </li>
   <% end %>
 </ul>
+
+<p><a href='/new'>New Document</a></p>
+
+<% if session[:username] %>
+  <form action='/users/signout' method='post'>
+    <p class='user-status'>Signed in as <%= session[:username] %>.</p>
+    <input type='submit' value='Sign Out'>
+  </form>
+<% else %>
+  <form action='/users/signin' method='get'>
+    <input type='submit' value='Sign In'>
+  </form>
+<% end %>
