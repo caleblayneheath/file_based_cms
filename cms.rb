@@ -3,6 +3,14 @@ require "sinatra/reloader" if development?
 require "sinatra/content_for"
 require "tilt/erubis"
 require "redcarpet"
+require 'yaml'
+require 'bcrypt'
+
+#[x] Validate that document names contain an extension that the application supports.
+#[ ] Add a "duplicate" button that creates a new document based on an old one.
+#[ ] Extend this project with a user signup form.
+#[ ] Add the ability to upload images to the CMS (which could be referenced within markdown files).
+#[ ] Modify the CMS so that each version of a document is preserved as changes are made to it.
 
 configure do
   enable :sessions
@@ -35,6 +43,24 @@ def data_path
   end
 end
 
+def load_user_credentials
+  path = if ENV['RACK_ENV'] == 'test'
+           File.expand_path("../test/users.yml", __FILE__)
+         else
+           File.expand_path("../users.yml", __FILE__)
+         end
+  YAML.load_file(path)
+end
+
+def valid_login?(username, password)
+  credentials = load_user_credentials
+  if credentials.key?(username)
+    BCrypt::Password.new(credentials[username]) == password
+  else
+    false
+  end
+end
+
 def valid_file_name?(filename)
   ['.txt', '.md'].include?(File.extname(filename))
 end
@@ -64,8 +90,9 @@ get '/new' do
   erb :new, layout: :layout
 end
 
-get '/:filename' do
-  file_name = params[:filename]
+get '/view/:filename' do
+  # File.basename is security feature, strips out all but file and extension
+  file_name = File.basename(params[:filename])
   file_path = File.join(data_path, file_name)
   
   if File.exist?(file_path)
@@ -94,7 +121,9 @@ get '/:filename/edit' do
 end
 
 post '/users/signin' do
-  if params[:username] == 'admin' && params[:pwd] == 'secret'
+  username = params[:username]
+  password = params[:pwd]
+  if valid_login?(username, password)
     session[:username] = params[:username]
     session[:message] = 'Welcome!'
     redirect '/'

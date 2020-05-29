@@ -8,6 +8,7 @@ gem "erubis"
 gem "rack-test"
 gem "minitest"
 gem "redcarpet"
+gem 'bcrypt'
 
 group :production do
   gem "puma"
