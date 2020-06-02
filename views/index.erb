@@ -2,8 +2,8 @@
   <% @files.each do |file| %>
     <li>
       <a href='/<%= file %>'><%= file %></a>
-      <a href='/<%= file %>/edit'>(edit)</a>
-      <form class='inline' method='post' action='/<%= file %>/delete'>
+      <a href='/edit/<%= file %>'>(edit)</a>
+      <form class='inline' method='post' action='/delete/<%= file %>'>
         <input type='submit' value='delete'>
       </form>
     </li>
@@ -21,4 +21,8 @@
   <form action='/users/signin' method='get'>
     <input type='submit' value='Sign In'>
   </form>
+  <br>
+  <a href='/users/new'>
+    <button>New User Signup</button>
+  </a>
 <% end %>

@@ -77,7 +77,7 @@ class AppTest < Minitest::Test
 
   def test_editing_document
     create_document 'history.txt'
-    get '/history.txt/edit', {}, admin_session
+    get '/edit/history.txt', {}, admin_session
 
     assert_equal 200, last_response.status
     assert_includes last_response.body, '<textarea'
@@ -127,7 +127,7 @@ class AppTest < Minitest::Test
 
   def test_deleting_document
     create_document 'test.txt'
-    post '/test.txt/delete', {}, admin_session
+    post '/delete/test.txt', {}, admin_session
 
     assert_equal 302, last_response.status
     
@@ -178,7 +178,7 @@ class AppTest < Minitest::Test
   def test_view_edit_document_signedout
     create_document 'history.txt'
     
-    get '/history.txt/edit'
+    get '/edit/history.txt'
 
     assert_equal 302, last_response.status
     assert_equal 'You must be signed in to do that.', session[:message]
@@ -194,7 +194,7 @@ class AppTest < Minitest::Test
   def test_deleting_document_signedout
     create_document 'test.txt'
     
-    post '/test.txt/delete'
+    post '/delete/test.txt'
     assert_equal 302, last_response.status
     assert_equal 'You must be signed in to do that.', session[:message]
   end
@@ -211,5 +211,16 @@ class AppTest < Minitest::Test
 
     assert_equal 302, last_response.status
     assert_equal 'You must be signed in to do that.', session[:message]
+  end
+
+  def test_view_signup
+    get '/users/new'
+
+    assert_equal 200, last_response.status
+    assert_includes last_response.body, "<input type='submit'"
+  end
+
+  def test_sign_up
+
   end
 end

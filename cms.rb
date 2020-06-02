@@ -1,8 +1,8 @@
-require "sinatra"
-require "sinatra/reloader" if development?
-require "sinatra/content_for"
-require "tilt/erubis"
-require "redcarpet"
+require 'sinatra'
+require 'sinatra/reloader' if development?
+require 'sinatra/content_for'
+require 'tilt/erubis'
+require 'redcarpet'
 require 'yaml'
 require 'bcrypt'
 
@@ -43,13 +43,16 @@ def data_path
   end
 end
 
+def credential_path
+  if ENV['RACK_ENV'] == 'test'
+    File.expand_path("../test/users.yml", __FILE__)
+  else
+    File.expand_path("../users.yml", __FILE__)
+  end
+end
+
 def load_user_credentials
-  path = if ENV['RACK_ENV'] == 'test'
-           File.expand_path("../test/users.yml", __FILE__)
-         else
-           File.expand_path("../users.yml", __FILE__)
-         end
-  YAML.load_file(path)
+  YAML.load_file(credential_path)
 end
 
 def valid_login?(username, password)
@@ -84,6 +87,10 @@ get '/users/signin' do
   erb :signin, layout: :layout
 end
 
+get '/users/new' do
+  erb :signup, layout: :layout
+end
+
 # requires signin
 get '/new' do
   require_signed_in_user
@@ -104,7 +111,7 @@ get '/view/:filename' do
 end
 
 # requires signin
-get '/:filename/edit' do
+get '/edit/:filename' do
   require_signed_in_user
   
   @file_name = params[:filename]
@@ -158,6 +165,41 @@ post '/users/signout' do
   redirect '/'
 end
 
+def signup_error(username, password)
+  credentials = load_user_credentials
+
+  if username == ''
+    'No username entered.'
+  elsif credentials[username]
+    "The user '#{username}' already exists."
+  elsif password.size < 6
+    'Password must be at least 6 characters long.'
+  end
+end
+
+def add_user_credentials(username, password)
+  credentials = load_user_credentials
+  credentials[username] = BCrypt::Password.create(password).to_s
+  File.open(credential_path, 'w') do |file|
+    file.write(credentials.to_yaml)
+  end
+end
+
+post '/users/signup' do
+  username = params[:username]
+  password = params[:password]
+
+  error = signup_error(username, password)
+  if error 
+    session[:message] = error
+    erb :signup, layout: :layout
+  else
+    add_user_credentials(username, password)
+    session[:message] = "User '#{username}' added."
+    redirect '/'
+  end
+end
+
 # requires signin
 post '/:filename' do
   require_signed_in_user
@@ -173,7 +215,7 @@ post '/:filename' do
 end
 
 # requires signin
-post '/:filename/delete' do
+post '/delete/:filename' do
   require_signed_in_user
   
   file_name = params[:filename]
