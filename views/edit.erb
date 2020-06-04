@@ -1,8 +1,9 @@
-<form action='/<%= @file_name %>' method='post'>
+<form action='/update/<%= @file_name %>' method='post'>
   <label for="content">Edit content of <%= @file_name %>:</label>
   <div>
     <textarea name="content" id="content" rows='20' cols='100'><%= @content %></textarea>
   </div>  
   <input type='submit' value='Save Changes'>
+  <a href='/'><button>Cancel</button></a>
   <input type='reset'>
 </form>

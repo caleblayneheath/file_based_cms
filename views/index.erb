@@ -1,8 +1,9 @@
 <ul>
   <% @files.each do |file| %>
     <li>
-      <a href='/<%= file %>'><%= file %></a>
+      <a href='/view/<%= file %>'><%= file %></a> - 
       <a href='/edit/<%= file %>'>(edit)</a>
+      <a href='/duplicate/<%= file %>'>(duplicate)</a>
       <form class='inline' method='post' action='/delete/<%= file %>'>
         <input type='submit' value='delete'>
       </form>

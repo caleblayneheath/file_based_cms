@@ -85,7 +85,7 @@ class AppTest < Minitest::Test
   end
 
   def test_updating_document
-    post '/changes.txt', { content: 'new Ruby content' }, admin_session
+    post '/update/changes.txt', { content: 'new Ruby content' }, admin_session
 
     assert_equal 302, last_response.status
     assert_equal 'changes.txt has been updated.', session[:message]
@@ -123,6 +123,16 @@ class AppTest < Minitest::Test
     assert_equal 422, last_response.status
     
     assert_includes last_response.body, 'A valid name is required.'
+  end
+
+  def test_create_document_that_already_exists
+    post '/create', { filename: 'test.txt' }, admin_session
+    assert_equal 302, last_response.status
+    assert_equal 'test.txt was created.', session[:message]
+
+    post '/create', { filename: 'test.txt' }, admin_session
+    assert_equal 422, last_response.status
+    assert_includes last_response.body, "test.txt already exists."
   end
 
   def test_deleting_document
@@ -185,7 +195,7 @@ class AppTest < Minitest::Test
   end
 
   def test_update_document_signedout   
-    post '/test.txt', { content: 'new Ruby content' }
+    post '/update/test.txt', { content: 'new Ruby content' }
 
     assert_equal 302, last_response.status
     assert_equal 'You must be signed in to do that.', session[:message]
@@ -220,7 +230,77 @@ class AppTest < Minitest::Test
     assert_includes last_response.body, "<input type='submit'"
   end
 
-  def test_sign_up
+  def test_signup_errors
+    post '/users/new', {username: ''}
+    assert_equal 422, last_response.status
+    assert_includes last_response.body, 'No username entered.'
 
+    post '/users/new', {username: 'admin'}
+    assert_equal 422, last_response.status
+    assert_includes last_response.body, "The user admin already exists."
+
+    post '/users/new', {username: 'bob', password: 'pass'}
+    assert_equal 422, last_response.status
+    assert_includes last_response.body, "Password must be at least 6 characters long."
+  end
+
+  def test_signup_and_signin
+    original_credentials = load_user_credentials
+    
+    post '/users/new', {username: 'bob', password: 'password'}
+    assert_equal 302, last_response.status
+    assert_equal "User bob added.", session[:message]
+
+    post '/users/signin', username: 'bob', pwd: 'password'
+    assert_equal 302, last_response.status
+    assert_equal 'Welcome!', session[:message]
+    assert_equal 'bob', session[:username]
+
+    get last_response['Location']
+    assert_includes last_response.body, 'Signed in as bob.'
+
+    File.open(credential_path, 'w') do |file|
+      file.write(original_credentials.to_yaml)
+    end
+  end
+
+  def test_duplicate_signedout
+    create_document 'history.txt'
+    get '/duplicate/history.txt'
+    
+    assert_equal 302, last_response.status
+    assert_equal 'You must be signed in to do that.', session[:message]
+  end
+
+  def test_view_duplicate
+    create_document 'test.txt'
+    get '/duplicate/test.txt', {}, admin_session
+
+    assert_equal 200, last_response.status
+    assert_includes last_response.body, 'Choose name for duplicate of test.txt'
+  end
+
+  def test_duplicate_errors
+    create_document 'test.txt'
+    
+    post '/duplicate/test.txt', { dupname: 'test.txt' }, admin_session
+    assert_equal 422, last_response.status
+    assert_includes last_response.body, 'test.txt already exists.'
+
+    post '/duplicate/test.txt', { dupname: '' }
+    assert_equal 422, last_response.status
+    assert_includes last_response.body, 'A valid name is required.'
+  end
+
+  def test_duplicate_file
+    create_document 'test.txt', 'some content'
+    
+    post '/duplicate/test.txt', { dupname: 'copy.txt' }, admin_session
+    assert_equal 302, last_response.status
+    assert_equal 'copy.txt duplicated from test.txt', session[:message]
+    
+    test_content = File.read(File.join(data_path, 'test.txt'))
+    copy_content = File.read(File.join(data_path, 'copy.txt'))
+    assert_equal test_content, copy_content
   end
 end

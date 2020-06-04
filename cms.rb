@@ -7,10 +7,17 @@ require 'yaml'
 require 'bcrypt'
 
 #[x] Validate that document names contain an extension that the application supports.
-#[ ] Add a "duplicate" button that creates a new document based on an old one.
-#[ ] Extend this project with a user signup form.
+#[x] Add a "duplicate" button that creates a new document based on an old one.
+#[x] Extend this project with a user signup form.
 #[ ] Add the ability to upload images to the CMS (which could be referenced within markdown files).
 #[ ] Modify the CMS so that each version of a document is preserved as changes are made to it.
+=begin
+when editing file
+  parse into three parts
+    name, version(optional), extension
+  increment version
+  combine parts into new version file name
+=end
 
 configure do
   enable :sessions
@@ -75,6 +82,27 @@ def require_signed_in_user
   end
 end
 
+
+def signup_error(username, password)
+  credentials = load_user_credentials
+
+  if username == ''
+    'No username entered.'
+  elsif credentials[username]
+    "The user #{username} already exists."
+  elsif password.size < 6
+    'Password must be at least 6 characters long.'
+  end
+end
+
+def add_user_credentials(username, password)
+  credentials = load_user_credentials
+  credentials[username] = BCrypt::Password.create(password).to_s
+  File.open(credential_path, 'w') do |file|
+    file.write(credentials.to_yaml)
+  end
+end
+
 get '/' do 
   pattern = File.join(data_path, '*')
   @files = Dir.glob(pattern).map do |path|
@@ -87,7 +115,7 @@ get '/users/signin' do
   erb :signin, layout: :layout
 end
 
-get '/users/new' do
+get '/users/new' do 
   erb :signup, layout: :layout
 end
 
@@ -127,6 +155,33 @@ get '/edit/:filename' do
   end
 end
 
+get '/duplicate/:filename' do
+  require_signed_in_user
+  @file_name = params[:filename]
+  erb :duplicate, layout: :layout
+end
+
+post '/duplicate/:filename' do
+  require_signed_in_user
+  @file_name = params[:filename]
+  duplicate_filename = params[:dupname]
+
+  error = file_name_error(duplicate_filename)
+
+  if error
+    session[:message] = error
+    status 422
+    erb :duplicate, layout: :layout
+  else
+    duplicate_file_path = File.join(data_path, duplicate_filename)
+    original_file_path = File.join(data_path, @file_name)
+    
+    File.write(duplicate_file_path, File.read(original_file_path))
+    session[:message] = "#{duplicate_filename} duplicated from #{@file_name}"
+    redirect '/'
+  end
+end
+
 post '/users/signin' do
   username = params[:username]
   password = params[:pwd]
@@ -141,21 +196,30 @@ post '/users/signin' do
   end
 end
 
+def file_name_error(file_name)
+  if !valid_file_name?(file_name)
+    'A valid name is required.'
+  elsif File.exist?(File.join(data_path, file_name))
+    "#{file_name} already exists."
+  end
+end
+
 # requires signin
 post '/create' do
   require_signed_in_user
   
   file_name = params[:filename]
-  
-  if valid_file_name?(file_name)
+  error = file_name_error(file_name)
+
+  if error
+    session[:message] = error
+    status 422
+    erb :new, layout: :layout
+  else
     file_path = File.join(data_path, file_name)
     File.write(file_path, '')
     session[:message] = "#{file_name} was created."
     redirect '/'
-  else
-    session[:message] = 'A valid name is required.'
-    status 422
-    erb :new, layout: :layout
   end
 end
 
@@ -165,52 +229,35 @@ post '/users/signout' do
   redirect '/'
 end
 
-def signup_error(username, password)
-  credentials = load_user_credentials
-
-  if username == ''
-    'No username entered.'
-  elsif credentials[username]
-    "The user '#{username}' already exists."
-  elsif password.size < 6
-    'Password must be at least 6 characters long.'
-  end
-end
-
-def add_user_credentials(username, password)
-  credentials = load_user_credentials
-  credentials[username] = BCrypt::Password.create(password).to_s
-  File.open(credential_path, 'w') do |file|
-    file.write(credentials.to_yaml)
-  end
-end
-
-post '/users/signup' do
+post '/users/new' do
   username = params[:username]
   password = params[:password]
 
   error = signup_error(username, password)
   if error 
     session[:message] = error
+    status 422
     erb :signup, layout: :layout
   else
     add_user_credentials(username, password)
-    session[:message] = "User '#{username}' added."
+    session[:message] = "User #{username} added."
     redirect '/'
   end
 end
 
 # requires signin
-post '/:filename' do
+post '/update/:filename' do
   require_signed_in_user
   
-  file_name = params[:filename]
-  file_path = File.join(data_path, file_name)
+  filename = params[:filename]
+  # old_file_name = params[:filename]
+  # new_file_name = old_file_name + "_v#{Time.new.to_i}"
+  file_path = File.join(data_path, filename)
 
   new_contents = params[:content]
   File.write(file_path, new_contents)
 
-  session[:message] = "#{file_name} has been updated."
+  session[:message] = "#{filename} has been updated."
   redirect '/'
 end
 
