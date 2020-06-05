@@ -12,6 +12,7 @@ require 'bcrypt'
 #[ ] Add the ability to upload images to the CMS (which could be referenced within markdown files).
 #[ ] Modify the CMS so that each version of a document is preserved as changes are made to it.
 =begin
+for versioning
 when editing file
   parse into three parts
     name, version(optional), extension
@@ -82,6 +83,13 @@ def require_signed_in_user
   end
 end
 
+def file_name_error(file_name)
+  if !valid_file_name?(file_name)
+    'A valid name is required.'
+  elsif File.exist?(File.join(data_path, file_name))
+    "#{file_name} already exists."
+  end
+end
 
 def signup_error(username, password)
   credentials = load_user_credentials
@@ -193,14 +201,6 @@ post '/users/signin' do
     session[:message] = 'Invalid Credentials'
     status 422
     erb :signin, layout: :layout
-  end
-end
-
-def file_name_error(file_name)
-  if !valid_file_name?(file_name)
-    'A valid name is required.'
-  elsif File.exist?(File.join(data_path, file_name))
-    "#{file_name} already exists."
   end
 end
 
